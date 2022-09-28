@@ -3,3 +3,18 @@
 ################################################################################
 
 /Server/Server/obj
+/Server/Server/bin/Debug/netcoreapp3.1
+/Server/Server.BLL/bin/Debug/netcoreapp3.1
+/Server/Server.BLL/obj
+/Server/Server.DAL/bin/Debug/netcoreapp3.1
+/Server/Server.DAL/obj
+/Server/Server.DAL.Interfaces/bin/Debug/netcoreapp3.1
+/Server/Server.DAL.Interfaces/obj
+/Server/Server.FtpServer/bin/Debug/netcoreapp3.1
+/Server/Server.FtpServer/obj
+/Server/Server.FtpServer.DTO/obj
+/Server/Server.Util/bin/Debug/netcoreapp3.1
+/Server/Server.Util/obj
+/Server/Server.FtpServer.DTO/bin/Debug/netcoreapp3.1
+/Server/.vs/Server
+/.vs
