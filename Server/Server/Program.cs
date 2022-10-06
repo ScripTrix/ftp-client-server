@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Server.FtpServer;
+using System;
 
 namespace Server
 {
@@ -6,7 +7,7 @@ namespace Server
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            var server = new FtpServer.FtpServer("127.0.0.1", 21);
         }
     }
 }

@@ -5,7 +5,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="6.0.1" />
+    <PackageReference Include="System.Data.SqlClient" Version="4.8.3" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Server.DAL.Interfaces\Server.DAL.Interfaces.csproj" />
+    <ProjectReference Include="..\Server.FtpServer.DTO\Server.FtpServer.DTO.csproj" />
+    <ProjectReference Include="..\Server.Util\Server.Util.csproj" />
   </ItemGroup>
 
 </Project>

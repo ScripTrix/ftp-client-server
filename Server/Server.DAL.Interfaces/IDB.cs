@@ -4,5 +4,6 @@ namespace Server.DAL.Interfaces
 {
     public interface IDB
     {
+
     }
 }
