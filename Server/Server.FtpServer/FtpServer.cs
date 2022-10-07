@@ -135,6 +135,7 @@ namespace Server.FtpServer
                 }
 
                 session.CommandTransfer = TcpListener.AcceptTcpClient();
+                session.DirectoryEngine = new BLL.DirectoryEngine();
                 if (session.CommandTransfer.Connected)
                 {
                     CancellationTokenSource cts = new CancellationTokenSource();
@@ -178,45 +179,48 @@ namespace Server.FtpServer
         public static void InitSessionCommands(Session session)
         {
             session.AvailableCommands = new Dictionary<Commands, Delegate>();
-            session.AvailableCommands[Commands.USER] = new Func<Session, string[], string>(CommandHandler.SessionUser);
-            session.AvailableCommands[Commands.PASS] = new Func<Session, string[], string>(CommandHandler.SessionPass);
-            session.AvailableCommands[Commands.FEAT] = new Func<Session, string[], string>(CommandHandler.SessionFeat);
-            session.AvailableCommands[Commands.QUIT] = new Func<Session, string[], string>(CommandHandler.SessionQuit);
             session.AvailableCommands[Commands.NONE] = new Func<Session, string[], string>(CommandHandler.SessionNone);
+            session.AvailableCommands[Commands.ADAT] = new Func<Session, string[], string>(CommandHandler.SessionAdat);
+            session.AvailableCommands[Commands.CCC] = new Func<Session, string[], string>(CommandHandler.SessionCcc);
+            session.AvailableCommands[Commands.ENC] = new Func<Session, string[], string>(CommandHandler.SessionEnc);
+            session.AvailableCommands[Commands.FEAT] = new Func<Session, string[], string>(CommandHandler.SessionFeat);
+            session.AvailableCommands[Commands.HELP] = new Func<Session, string[], string>(CommandHandler.SessionHelp);
+            session.AvailableCommands[Commands.HOST] = new Func<Session, string[], string>(CommandHandler.SessionHost);
+            session.AvailableCommands[Commands.LANG] = new Func<Session, string[], string>(CommandHandler.SessionLang);
+            session.AvailableCommands[Commands.MIC] = new Func<Session, string[], string>(CommandHandler.SessionMic);
+            session.AvailableCommands[Commands.MODE] = new Func<Session, string[], string>(CommandHandler.SessionMode);
+            session.AvailableCommands[Commands.NOOP] = new Func<Session, string[], string>(CommandHandler.SessionNoop);
+            session.AvailableCommands[Commands.OPTS] = new Func<Session, string[], string>(CommandHandler.SessionOpts);
+            session.AvailableCommands[Commands.PASS] = new Func<Session, string[], string>(CommandHandler.SessionPass);
+            session.AvailableCommands[Commands.PBSZ] = new Func<Session, string[], string>(CommandHandler.SessionPbsz);
+            session.AvailableCommands[Commands.PROT] = new Func<Session, string[], string>(CommandHandler.SessionProt);
+            session.AvailableCommands[Commands.QUIT] = new Func<Session, string[], string>(CommandHandler.SessionQuit);
+            session.AvailableCommands[Commands.REIN] = new Func<Session, string[], string>(CommandHandler.SessionRein);
+            session.AvailableCommands[Commands.STRU] = new Func<Session, string[], string>(CommandHandler.SessionStru);
+            session.AvailableCommands[Commands.SYST] = new Func<Session, string[], string>(CommandHandler.SessionSyst);
+            session.AvailableCommands[Commands.TYPE] = new Func<Session, string[], string>(CommandHandler.SessionType);
+            session.AvailableCommands[Commands.USER] = new Func<Session, string[], string>(CommandHandler.SessionUser);
         }
 
         public static void ExtendSessionCommands(Session session)
         {
             session.AvailableCommands[Commands.ABOR] = new Func<Session, string[], string>(CommandHandler.SessionAbor);
             session.AvailableCommands[Commands.ACCT] = new Func<Session, string[], string>(CommandHandler.SessionAcct);
-            session.AvailableCommands[Commands.ADAT] = new Func<Session, string[], string>(CommandHandler.SessionAdat);
             session.AvailableCommands[Commands.ALLO] = new Func<Session, string[], string>(CommandHandler.SessionAllo);
             session.AvailableCommands[Commands.APPE] = new Func<Session, string[], string>(CommandHandler.SessionAppe);
             session.AvailableCommands[Commands.AUTH] = new Func<Session, string[], string>(CommandHandler.SessionAuth);
-            session.AvailableCommands[Commands.CCC] = new Func<Session, string[], string>(CommandHandler.SessionCcc);
             session.AvailableCommands[Commands.CDUP] = new Func<Session, string[], string>(CommandHandler.SessionCdup);
             session.AvailableCommands[Commands.CWD] = new Func<Session, string[], string>(CommandHandler.SessionCwd);
             session.AvailableCommands[Commands.DELE] = new Func<Session, string[], string>(CommandHandler.SessionDele);
-            session.AvailableCommands[Commands.ENC] = new Func<Session, string[], string>(CommandHandler.SessionEnc);
             session.AvailableCommands[Commands.EPRT] = new Func<Session, string[], string>(CommandHandler.SessionEprt);
             session.AvailableCommands[Commands.EPSV] = new Func<Session, string[], string>(CommandHandler.SessionEpsv);
-            session.AvailableCommands[Commands.HELP] = new Func<Session, string[], string>(CommandHandler.SessionHelp);
-            session.AvailableCommands[Commands.HOST] = new Func<Session, string[], string>(CommandHandler.SessionHost);
-            session.AvailableCommands[Commands.LANG] = new Func<Session, string[], string>(CommandHandler.SessionLang);
             session.AvailableCommands[Commands.LIST] = new Func<Session, string[], string>(CommandHandler.SessionList);
             session.AvailableCommands[Commands.MDTM] = new Func<Session, string[], string>(CommandHandler.SessionMdtm);
-            session.AvailableCommands[Commands.MIC] = new Func<Session, string[], string>(CommandHandler.SessionMic);
             session.AvailableCommands[Commands.MKD] = new Func<Session, string[], string>(CommandHandler.SessionMkd);
-            session.AvailableCommands[Commands.MODE] = new Func<Session, string[], string>(CommandHandler.SessionMode);
             session.AvailableCommands[Commands.NLST] = new Func<Session, string[], string>(CommandHandler.SessionNlst);
-            session.AvailableCommands[Commands.NOOP] = new Func<Session, string[], string>(CommandHandler.SessionNoop);
-            session.AvailableCommands[Commands.OPTS] = new Func<Session, string[], string>(CommandHandler.SessionOpts);
             session.AvailableCommands[Commands.PASV] = new Func<Session, string[], string>(CommandHandler.SessionPasv);
-            session.AvailableCommands[Commands.PBSZ] = new Func<Session, string[], string>(CommandHandler.SessionPbsz);
             session.AvailableCommands[Commands.PORT] = new Func<Session, string[], string>(CommandHandler.SessionPort);
-            session.AvailableCommands[Commands.PROT] = new Func<Session, string[], string>(CommandHandler.SessionProt);
             session.AvailableCommands[Commands.PWD] = new Func<Session, string[], string>(CommandHandler.SessionPwd);
-            session.AvailableCommands[Commands.REIN] = new Func<Session, string[], string>(CommandHandler.SessionRein);
             session.AvailableCommands[Commands.REST] = new Func<Session, string[], string>(CommandHandler.SessionRest);
             session.AvailableCommands[Commands.RETR] = new Func<Session, string[], string>(CommandHandler.SessionRetr);
             session.AvailableCommands[Commands.RMD] = new Func<Session, string[], string>(CommandHandler.SessionRmd);
@@ -228,9 +232,6 @@ namespace Server.FtpServer
             session.AvailableCommands[Commands.STAT] = new Func<Session, string[], string>(CommandHandler.SessionStat);
             session.AvailableCommands[Commands.STOR] = new Func<Session, string[], string>(CommandHandler.SessionStor);
             session.AvailableCommands[Commands.STOU] = new Func<Session, string[], string>(CommandHandler.SessionStou);
-            session.AvailableCommands[Commands.STRU] = new Func<Session, string[], string>(CommandHandler.SessionStru);
-            session.AvailableCommands[Commands.SYST] = new Func<Session, string[], string>(CommandHandler.SessionSyst);
-            session.AvailableCommands[Commands.TYPE] = new Func<Session, string[], string>(CommandHandler.SessionType);
             session.AvailableCommands[Commands.XCUP] = new Func<Session, string[], string>(CommandHandler.SessionXcup);
             session.AvailableCommands[Commands.XCWD] = new Func<Session, string[], string>(CommandHandler.SessionXcwd);
             session.AvailableCommands[Commands.XMKD] = new Func<Session, string[], string>(CommandHandler.SessionXmkd);
@@ -244,14 +245,28 @@ namespace Server.FtpServer
             {
                 if (session != null)
                 {
-                    InitSessionCommands(session);
+                    //InitSessionCommands(session);
                     Reply(session, "220 Connected to FtpServer(Developed by ScripTrix).\r\n");
                     while (session.CommandTransfer.Connected || !token.IsCancellationRequested)
                     {
+                        if(session.IsAuthenticate)
+                        {
+                            ExtendSessionCommands(session);
+                        }
+                        else
+                        {
+                            InitSessionCommands(session);
+                        }
                         var commandInfo = ReceiveCommand(session).Split(' ');
                         Commands command = EnumParser.Parse<Commands>(commandInfo[0]);
-
-                        Reply(session, (string)session.AvailableCommands[command].DynamicInvoke(session, commandInfo));
+                        if (session.AvailableCommands.ContainsKey(command))
+                        {
+                            Reply(session, (string)session.AvailableCommands[command].DynamicInvoke(session, commandInfo));
+                        }
+                        else
+                        {
+                            Reply(session, "530 Please login with USER and PASS.\r\n");
+                        }
                     }
 
                     session.CommandTransfer.Close();
@@ -282,6 +297,7 @@ namespace Server.FtpServer
                     {
                         continue;
                     }
+                    // NEED FIX
                     else if (!session.Key.CommandTransfer.Connected)
                     {
                         Console.WriteLine($"Session with ID: {session.Key.Id} was completed");

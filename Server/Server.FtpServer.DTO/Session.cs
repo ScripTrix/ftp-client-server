@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Server.BLL;
+using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Text;
@@ -16,6 +17,8 @@ namespace Server.FtpServer.DTO
         public bool IsAuthenticate { get; set; }
 
         public DateTime Disconnected { get; set; }
+
+        public DirectoryEngine DirectoryEngine { get; set; }
 
         public TcpClient CommandTransfer { get; set; }
 

@@ -79,7 +79,7 @@ namespace Server.FtpServer
         public static string SessionPass(Session session, string[] props)
         {
             string result;
-            if(session.CurrentCommand != "USER")
+            if(session.CurrentCommand.ToUpper() != "USER")
             {
                 result = "503 Failed Command Sequence: Enter the USER command first.\r\n";
             }
@@ -205,21 +205,68 @@ namespace Server.FtpServer
             return "500";
         }
 
+        /// <summary>
+        /// Метод обрабатывает команду CCC и служит для изменения режима передачи в управляющем соединении с зашифрованного режима на режим открытого текста
+        /// </summary>
+        /// <param name="session">Сессия FTP сервера, по отношению к которой выполняется команда</param>
+        /// <param name="props">Массив, содержащий команду по индексу 0, вслед за которой идут параметры команды</param>
+        /// <returns>Ответ FTP сервера ({код} {сообщение})</returns>
         public static string SessionCcc(Session session, string[] props)
         {
             return "500";
         }
 
+        /// <summary>
+        /// Метод обрабатывает команду CDUP и служит для смены текущего каталога на вышестоящий
+        /// </summary>
+        /// <param name="session">Сессия FTP сервера, по отношению к которой выполняется команда</param>
+        /// <param name="props">Массив, содержащий команду по индексу 0, вслед за которой идут параметры команды</param>
+        /// <returns>Ответ FTP сервера ({код} {сообщение})</returns>
         public static string SessionCdup(Session session, string[] props)
         {
             return "500";
         }
 
+        /// <summary>
+        /// Метод обрабатывает команду CWD и служит для смены текущего каталога
+        /// </summary>
+        /// <param name="session">Сессия FTP сервера, по отношению к которой выполняется команда</param>
+        /// <param name="props">Массив, содержащий команду по индексу 0, вслед за которой идут параметры команды</param>
+        /// <returns>Ответ FTP сервера ({код} {сообщение})</returns>
         public static string SessionCwd(Session session, string[] props)
         {
-            return "500";
+            string dir = null;
+            if(props.Length > 2)
+            {
+                return $"501 Syntax error (bad parameter or argument): {string.Join(";", props.Skip(2).ToArray())} not understood.\r\n";
+            }
+            if(props.Length == 2)
+            {
+                dir = session.DirectoryEngine.ChangeWorkDirectory(props[1]);
+            }
+            else
+            {
+                return "500 Syntax error (bad parameter or argument).\r\n";
+            }
+            if(dir == null)
+            {
+                return "550 The system cannot find the file specified.\r\n" +
+                            "\tError details: File system returned an error.\r\n" +
+                       "550 End.\r\n";
+            }
+            if(dir == "")
+            {
+                return "530 Access denied.\r\n";
+            }
+            return $"257 \"{session.DirectoryEngine.GetWorkingDirectory()}\" is current directory.\r\n";
         }
 
+        /// <summary>
+        /// Метод обрабатывает команду DELE и служит для удаления файла (DELE filename) 
+        /// </summary>
+        /// <param name="session">Сессия FTP сервера, по отношению к которой выполняется команда</param>
+        /// <param name="props">Массив, содержащий команду по индексу 0, вслед за которой идут параметры команды</param>
+        /// <returns>Ответ FTP сервера ({код} {сообщение})</returns>
         public static string SessionDele(Session session, string[] props)
         {
             return "500";
@@ -287,7 +334,9 @@ namespace Server.FtpServer
 
         public static string SessionNoop(Session session, string[] props)
         {
-            return "500";
+            if(props.Length > 1)
+                return "500 Command not understood.\r\n";
+            return "200 noop command successful.\r\n";
         }
 
         public static string SessionOpts(Session session, string[] props)
@@ -317,7 +366,12 @@ namespace Server.FtpServer
 
         public static string SessionPwd(Session session, string[] props)
         {
-            return "500";
+            var dir = session.DirectoryEngine.GetWorkingDirectory();
+            if(dir == null)
+            {
+                return "550 File not available, e.g. not found.\r\n";
+            }
+            return $"257 \"{dir}\" is current directory.\r\n";
         }
 
         public static string SessionRein(Session session, string[] props)
