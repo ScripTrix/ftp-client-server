@@ -1,8 +1,11 @@
-﻿using Server.FtpServer.DTO;
+﻿using Server.BLL;
+using Server.FtpServer.DTO;
 using Server.Util;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -24,7 +27,7 @@ namespace Server.FtpServer
             {
                 result = $"501 Syntax error (bad parameter or argument): {string.Join(";", props.Skip(3).ToArray())} not understood.\r\n";
             }
-            else if(props.Length > 1)
+            else if (props.Length > 1)
             {
                 session.User = Session.Users.FirstOrDefault(e => e.Username == props[1]);
                 if (session.User is null)
@@ -69,7 +72,7 @@ namespace Server.FtpServer
         /// <returns>Ответ FTP сервера ({код} {сообщение})</returns>
         public static string SessionNone(Session session, string[] props)
             => "500 Syntax error, command cannot be interpreted\r\n";
-        
+
         /// <summary>
         /// Метод обрабатывает команду PASS и выполняет инициализацию пользователя в сессии
         /// </summary>
@@ -79,23 +82,23 @@ namespace Server.FtpServer
         public static string SessionPass(Session session, string[] props)
         {
             string result;
-            if(session.CurrentCommand.ToUpper() != "USER")
+            if (session.CurrentCommand.ToUpper() != "USER")
             {
                 result = "503 Failed Command Sequence: Enter the USER command first.\r\n";
             }
-            else if(props.Length > 2)
+            else if (props.Length > 2)
             {
                 result = $"501 Syntax error (bad parameter or argument): {string.Join(";", props.Skip(3).ToArray())} not understood.\r\n";
             }
-            else if(props.Length == 2)
+            else if (props.Length == 2)
             {
-                if(session.User == null)
+                if (session.User == null)
                 {
                     result = "530 Login failed! Authentication required (not logged in).\r\n";
                 }
                 else
                 {
-                    if(session.User.Username == "anonymous")
+                    if (session.User.Username == "anonymous")
                     {
                         using (HashAlgorithm algorithm = SHA256.Create())
                             session.User.Hash = Encoding.UTF8.GetString(algorithm.ComputeHash(Encoding.UTF8.GetBytes(props[1])));
@@ -107,15 +110,15 @@ namespace Server.FtpServer
                         string sha256;
                         using (HashAlgorithm algorithm = SHA256.Create())
                             sha256 = String.Concat(algorithm.ComputeHash(Encoding.UTF8.GetBytes(props[1])).Select(e => e.ToString("x2")));
-                            if (session.User.Hash == sha256)
-                            {
-                                result = "230 User authenticated, continue.\r\n";
-                                session.IsAuthenticate = true;
-                            }
-                            else
-                            {
-                                result = "530 Login failed! Authentication required (incorrect password).\r\n";
-                            }
+                        if (session.User.Hash == sha256)
+                        {
+                            result = "230 User authenticated, continue.\r\n";
+                            session.IsAuthenticate = true;
+                        }
+                        else
+                        {
+                            result = "530 Login failed! Authentication required (incorrect password).\r\n";
+                        }
                     }
                     session.PreviousCommand = session.CurrentCommand;
                     session.CurrentCommand = props[0];
@@ -236,11 +239,11 @@ namespace Server.FtpServer
         public static string SessionCwd(Session session, string[] props)
         {
             string dir = null;
-            if(props.Length > 2)
+            if (props.Length > 2)
             {
                 return $"501 Syntax error (bad parameter or argument): {string.Join(";", props.Skip(2).ToArray())} not understood.\r\n";
             }
-            if(props.Length == 2)
+            if (props.Length == 2)
             {
                 dir = session.DirectoryEngine.ChangeWorkDirectory(props[1]);
             }
@@ -248,13 +251,13 @@ namespace Server.FtpServer
             {
                 return "500 Syntax error (bad parameter or argument).\r\n";
             }
-            if(dir == null)
+            if (dir == null)
             {
                 return "550 The system cannot find the file specified.\r\n" +
                             "\tError details: File system returned an error.\r\n" +
                        "550 End.\r\n";
             }
-            if(dir == "")
+            if (dir == "")
             {
                 return "530 Access denied.\r\n";
             }
@@ -284,7 +287,44 @@ namespace Server.FtpServer
 
         public static string SessionEpsv(Session session, string[] props)
         {
-            return "500";
+            TcpListener listener = null;
+            bool isConnected = false;
+            for (int i = 49152; i < 65535; i++)
+            {
+                try
+                {
+                    var ipEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), i);
+                    listener = new TcpListener(ipEndPoint);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Port: {i} already in use.");
+                }
+                finally
+                {
+                    if (listener != null)
+                    {
+                        listener.Start();
+                        Console.WriteLine($"Extended passive mode on (Port: {i})");
+                        FtpServer.Reply(session, $"229 Entering Extended Passive Mode (|||{i}|).\r\n");
+                        session.DataTransfer = listener.AcceptTcpClient();
+                        listener.Stop();
+                    }
+                }
+                if (session.DataTransfer.Connected)
+                {
+                    isConnected = true;
+                    break;
+                }
+            }
+            if (!isConnected)
+            {
+                return "451 Local error, Operation aborted.\r\n";
+            }
+            else
+            {
+                return "";
+            }
         }
 
         public static string SessionHelp(Session session, string[] props)
@@ -304,12 +344,53 @@ namespace Server.FtpServer
 
         public static string SessionList(Session session, string[] props)
         {
-            return "500";
+            if (props.Length == 1 || props.Length == 2)
+            {
+                FtpServer.Reply(session, "150 Opening ||ASCII|| mode data connection.\r\n");
+                if (session.DataTransfer == null)
+                {
+                    return "425 Cannot open data connection.\r\n";
+                }
+                else
+                {
+                    if (props.Length == 2)
+                    {
+                        FtpServer.SendData(session, session.DirectoryEngine.GetContent(props[1]));
+                    }
+                    else
+                    {
+                        FtpServer.SendData(session, session.DirectoryEngine.GetContent(session.DirectoryEngine.CurrentFtpPath));
+                    }
+                    var flag = FtpServer.ReceiveCommand(session);
+                    session.DataTransfer.Close();
+                    return "226 Transfer complete.\r\n";
+                }
+            }
+            else
+            {
+                return "501 Syntax error.\r\n";
+            }
         }
 
         public static string SessionMdtm(Session session, string[] props)
         {
-            return "500";
+            if (props.Length > 1)
+            {
+                var length = session.DirectoryEngine.GetSize(props[1]);
+                if (length == -1)
+                {
+                    return "500 File not exist.\r\n";
+                }
+                else
+                {
+
+                    return $"213 {length}\r\n";
+                }
+            }
+            else
+            {
+                return "501 Syntax error\r\n";
+            }
         }
 
         public static string SessionMic(Session session, string[] props)
@@ -334,7 +415,7 @@ namespace Server.FtpServer
 
         public static string SessionNoop(Session session, string[] props)
         {
-            if(props.Length > 1)
+            if (props.Length > 1)
                 return "500 Command not understood.\r\n";
             return "200 noop command successful.\r\n";
         }
@@ -367,7 +448,7 @@ namespace Server.FtpServer
         public static string SessionPwd(Session session, string[] props)
         {
             var dir = session.DirectoryEngine.GetWorkingDirectory();
-            if(dir == null)
+            if (dir == null)
             {
                 return "550 File not available, e.g. not found.\r\n";
             }
@@ -426,7 +507,47 @@ namespace Server.FtpServer
 
         public static string SessionStor(Session session, string[] props)
         {
-            return "500";
+            if (props.Length < 2)
+            {
+                return "501 Syntax error.\r\n";
+            }
+            else
+            {
+                byte[] buffer;
+                var path = "";
+                var counter = 0;
+                while (!path.Contains("."))
+                {
+                    counter++;
+                    if (props.Length > counter)
+                        path += $"{((counter == 1) ? props[counter] : $" {props[counter]}")}";
+                    else
+                        break;
+                }
+                if (!path.Contains("."))
+                {
+                    return "501 Syntax error.\r\n";
+                }
+                var length = session.DirectoryEngine.GetSize(path);
+                if (length == -1)
+                {
+                    return "500 File not exist.\r\n";
+                }
+                else
+                {
+                    FtpServer.Reply(session, "150 Opening ||ASCII|| mode data connection.\r\n");
+                    int result = session.DirectoryEngine.ReadFilePart(path, out buffer);
+                    if (buffer != null)
+                    {
+                        FtpServer.SendData(session, Encoding.UTF8.GetString(buffer));
+                        buffer = null;
+                    }
+
+                    var flag = FtpServer.ReceiveCommand(session);
+                    session.DataTransfer.Close();
+                    return "226 Transfer complete.\r\n";
+                }
+            }
         }
 
         public static string SessionStou(Session session, string[] props)

@@ -27,6 +27,10 @@ namespace Server.FtpServer.DTO
         public string PreviousCommand { get; set; }
         
         public TcpClient DataTransfer { get; set; }
+        
+        public FtpModes Mode { get; set; }
+
+        public FtpTypes Type { get; set; }
 
         public Dictionary<Commands, Delegate> AvailableCommands { get; set; } = new Dictionary<Commands, Delegate>();
 

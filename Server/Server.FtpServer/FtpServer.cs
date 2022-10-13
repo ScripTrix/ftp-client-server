@@ -139,7 +139,7 @@ namespace Server.FtpServer
                 if (session.CommandTransfer.Connected)
                 {
                     CancellationTokenSource cts = new CancellationTokenSource();
-                    var sessionThread = new Thread(delegate()
+                    var sessionThread = new Thread(delegate ()
                     {
                         ProcessSession(session, cts.Token);
                     });
@@ -157,6 +157,63 @@ namespace Server.FtpServer
                 byte[] byteData = Encoding.UTF8.GetBytes(data);
                 var bytesSent = Convert.ToInt64(session.CommandTransfer.Client.Send(byteData));
                 Console.WriteLine($"{bytesSent} bytes sent to client session: {session.Id}");
+            }
+        }
+
+        public static byte[] ReceiveData(Session session)
+        {
+            NetworkStream stream = session.DataTransfer.GetStream();
+
+            byte[] fileSizeBytes = new byte[4];
+            int bytes = stream.Read(fileSizeBytes, 0, 4);
+            int dataLength = BitConverter.ToInt32(fileSizeBytes, 0);
+
+            int bytesLeft = dataLength;
+            byte[] data = new byte[dataLength];
+
+            int bufferSize = 65536;
+            int bytesRead = 0;
+
+            while (bytesLeft > 0)
+            {
+                int curDataSize = Math.Min(bufferSize, bytesLeft);
+                if (session.DataTransfer.Available < curDataSize)
+                    curDataSize = session.DataTransfer.Available;
+
+                bytes = stream.Read(data, bytesRead, curDataSize);
+
+                bytesRead += curDataSize;
+                bytesLeft -= curDataSize;
+            }
+            return data;
+        }
+
+        public static void SendData(Session session, string data)
+        {
+            if (session.DataTransfer.Connected)
+            {
+                using (var ns = new NetworkStream(session.DataTransfer.Client))
+                {
+                    int bufferSize = 8192;
+                    byte[] byteData = Encoding.UTF8.GetBytes(data);
+                    byte[] dataSize = BitConverter.GetBytes(byteData.Length);
+
+                    ns.Write(dataSize, 0, 4);
+
+                    int bytesSent = 0;
+                    int bytesLeft = data.Length;
+
+                    while (bytesLeft > 0)
+                    {
+                        int curDataSize = Math.Min(bufferSize, bytesLeft);
+
+                        ns.Write(byteData, bytesSent, curDataSize);
+
+                        bytesSent += curDataSize;
+                        bytesLeft -= curDataSize;
+                    }
+                    Console.WriteLine($"{bytesSent} bytes of data sent to client session: {session.Id}");
+                }
             }
         }
 
@@ -249,7 +306,7 @@ namespace Server.FtpServer
                     Reply(session, "220 Connected to FtpServer(Developed by ScripTrix).\r\n");
                     while (session.CommandTransfer.Connected || !token.IsCancellationRequested)
                     {
-                        if(session.IsAuthenticate)
+                        if (session.IsAuthenticate)
                         {
                             ExtendSessionCommands(session);
                         }

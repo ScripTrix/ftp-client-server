@@ -1,0 +1,239 @@
+﻿<Window x:Class="Client.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Client"
+        xmlns:model="clr-namespace:Client.Model"
+        xmlns:viewModel="clr-namespace:Client.ViewModel"
+        xmlns:core="using:Microsoft.Xaml.Interactions.Core"
+        xmlns:interactivity="using:Microsoft.Xaml.Interactivity"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800">
+
+    <Window.Resources>
+        <Image x:Key="LocalBack" Source="/Icons/back_32x32.png"/>
+        <Image x:Key="RemoteBack" Source="/Icons/back_32x32.png"/>
+    </Window.Resources>
+
+    <Window.DataContext>
+        <viewModel:MainWindowViewModel/>
+    </Window.DataContext>
+    
+    <Grid Background="#F0F0F0">
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="46"/>
+            <RowDefinition Height="3*"/>
+            <RowDefinition Height="7*"/>
+        </Grid.RowDefinitions>
+
+        <!--HEADER-->
+        <Grid Grid.Row="0">
+
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0"
+                        Margin="5"
+                        MinWidth="140"
+                        MaxWidth="200">
+                <TextBlock Text="Host"/>
+                <TextBox Text="{Binding SessionInfo.Host}"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1"
+                        Margin="5"
+                        MinWidth="140"
+                        MaxWidth="200">
+                <TextBlock Text="Username"/>
+                <TextBox Text="{Binding SessionInfo.Username}"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="2"
+                        Margin="5"
+                        MinWidth="140"
+                        MaxWidth="200">
+                <TextBlock Text="Password"/>
+                <TextBox Text="{Binding SessionInfo.Password}"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="3"
+                        Margin="5" 
+                        MinWidth="140"
+                        MaxWidth="200">
+                <TextBlock Text="Port"/>
+                <TextBox Text="{Binding SessionInfo.Port}"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="4"
+                        Margin="5"
+                        MinWidth="140"
+                        MaxWidth="200"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Bottom">
+                <Button Content="Connect" Command="{Binding ConnectCommand}"/>
+            </StackPanel>
+
+        </Grid>
+
+        <!--FTP IO-->
+        <Grid Grid.Row="1">
+
+            <ListBox HorizontalAlignment="Stretch"
+                     VerticalAlignment="Stretch"
+                     BorderThickness="3 2 3 2"
+                     Background="White"
+                     ItemsSource="{Binding Client.CommandLogger.Logs}">
+                <ListBox.Resources>
+                    <DataTemplate DataType="{x:Type model:CommandFormatModel}">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
+                            <TextBlock Text="{Binding Host, Mode=OneWay}" Margin="0 0 5 0"/>
+                            <TextBlock Text="{Binding Message, Mode=OneWay}"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.Resources>
+            </ListBox>
+
+        </Grid>
+
+        <!--SYSTEM AND FTP FILE EXPLORERS-->
+        <Grid Grid.Row="2">
+
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="8"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!--SYSTEM FILE EXPLORER-->
+            <Grid Grid.Column="0">
+
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="30"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" Margin="5 0 0 0">
+
+                    <Button Background="Transparent" 
+                            Width="32" 
+                            Height="32" 
+                            HorizontalAlignment="Left"
+                            BorderThickness="0"
+                            Command="{Binding LocalDirectoryBackCommand}">
+                        <StaticResource ResourceKey="LocalBack"/>
+                    </Button>
+                    
+                </Grid>
+
+                <DataGrid Grid.Row="2"
+                          Margin="4 0 0 4"
+                          Background="White"
+                          ItemsSource="{Binding CurrentDirectory}"
+                          SelectedItem="{Binding SelectedFileObject}"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          GridLinesVisibility="None"
+                          CanUserResizeColumns="False"
+                          CanUserResizeRows="False"
+                          SelectionUnit="FullRow"
+                          SelectionMode="Single">
+                    <DataGrid.InputBindings>
+                        <MouseBinding
+                            Gesture="LeftDoubleClick"
+                            Command="{Binding LocalDirectoryCommand}"
+                            CommandParameter="{Binding SelectedFileObject}"/>
+                    </DataGrid.InputBindings>
+                    <DataGrid.Columns>
+                        <DataGridTemplateColumn>
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Image Source="{Binding Image}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Name"
+                                            Binding="{ Binding Name}"/>
+                        <DataGridTextColumn Header="Size"
+                                            Binding="{ Binding Size}"/>
+                        <DataGridTextColumn Header="Type"
+                                            Binding="{ Binding Type}"/>
+                        <DataGridTextColumn Header="Last access"
+                                            Binding="{ Binding LastAccess}"/>
+                    </DataGrid.Columns>
+
+                </DataGrid>
+
+            </Grid>
+
+            <!--REMOTE FILE EXPLORER-->
+            <Grid Grid.Column="2">
+
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="30"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0">
+
+                    <Button Background="Transparent" 
+                            Width="32" 
+                            Height="32" 
+                            HorizontalAlignment="Left"
+                            BorderThickness="0"
+                            Command="{Binding RemoteDirectoryBackCommand}">
+                        <StaticResource ResourceKey="RemoteBack"/>
+                    </Button>
+
+                </Grid>
+
+                <DataGrid Grid.Row="2"
+                          Margin="0 0 4 4"
+                          Background="White"
+                          ItemsSource="{Binding FtpCurrentDirectory}"
+                          SelectedItem="{Binding FtpSelectedFileObject}"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          GridLinesVisibility="None"
+                          CanUserResizeColumns="False"
+                          CanUserResizeRows="False"
+                          SelectionUnit="FullRow"
+                          SelectionMode="Single">
+                    <DataGrid.InputBindings>
+                        <MouseBinding
+                            Gesture="LeftDoubleClick"
+                            Command="{Binding RemoteDirectoryCommand}"
+                            CommandParameter="{Binding FtpSelectedFileObject}"/>
+                    </DataGrid.InputBindings>
+                    <DataGrid.Columns>
+                        <DataGridTemplateColumn>
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Image Source="{Binding Image}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Name"
+                                            Binding="{ Binding Name}"/>
+                        <DataGridTextColumn Header="Size"
+                                            Binding="{ Binding Size}"/>
+                        <DataGridTextColumn Header="Type"
+                                            Binding="{ Binding Type}"/>
+                        <DataGridTextColumn Header="Last access"
+                                            Binding="{ Binding LastAccess}"/>
+                    </DataGrid.Columns>
+
+                </DataGrid>
+
+            </Grid>
+
+        </Grid>
+
+    </Grid>
+</Window>

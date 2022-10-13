@@ -1,0 +1,45 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Model\Новая папка\**" />
+    <EmbeddedResource Remove="Model\Новая папка\**" />
+    <None Remove="Model\Новая папка\**" />
+    <Page Remove="Model\Новая папка\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Icons\back_32x32.png" />
+    <None Remove="Icons\drive_16x16.ico" />
+    <None Remove="Icons\drive_32x32.ico" />
+    <None Remove="Icons\file_16x16.ico" />
+    <None Remove="Icons\file_24x24.ico" />
+    <None Remove="Icons\folder_16x16.ico" />
+    <None Remove="Icons\folder_24x24.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Icons\back_32x32.png" />
+    <Resource Include="Icons\drive_16x16.ico" />
+    <Resource Include="Icons\drive_32x32.ico" />
+    <Resource Include="Icons\file_16x16.ico" />
+    <Resource Include="Icons\file_24x24.ico" />
+    <Resource Include="Icons\folder_16x16.ico" />
+    <Resource Include="Icons\folder_24x24.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="View\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MvvmLightLibs" Version="5.4.1.1" />
+    <PackageReference Include="Prism.Core" Version="8.1.97" />
+  </ItemGroup>
+
+</Project>
