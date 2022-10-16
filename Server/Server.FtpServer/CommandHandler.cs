@@ -79,7 +79,7 @@ namespace Server.FtpServer
         /// <param name="session">Сессия FTP сервера, по отношению к которой выполняется команда</param>
         /// <param name="props">Массив, содержащий команду по индексу 0, вслед за которой идут параметры команды</param>
         /// <returns>Ответ FTP сервера ({код} {сообщение})</returns>
-        public static string SessionPass(Session session, string[] props)
+        public static string SessionPass(Session session, string[] props) 
         {
             string result;
             if (session.CurrentCommand.ToUpper() != "USER")
@@ -355,11 +355,11 @@ namespace Server.FtpServer
                 {
                     if (props.Length == 2)
                     {
-                        FtpServer.SendData(session, session.DirectoryEngine.GetContent(props[1]));
+                        FtpServer.SendData(session, Encoding.UTF8.GetBytes(session.DirectoryEngine.GetContent(props[1]))); //
                     }
                     else
                     {
-                        FtpServer.SendData(session, session.DirectoryEngine.GetContent(session.DirectoryEngine.CurrentFtpPath));
+                        FtpServer.SendData(session, Encoding.UTF8.GetBytes(session.DirectoryEngine.GetContent(session.DirectoryEngine.CurrentFtpPath))); //
                     }
                     var flag = FtpServer.ReceiveCommand(session);
                     session.DataTransfer.Close();
@@ -467,7 +467,38 @@ namespace Server.FtpServer
 
         public static string SessionRetr(Session session, string[] props)
         {
-            return "500";
+            if (props.Length < 2)
+            {
+                return "501 Syntax error.\r\n";
+            }
+            else
+            {
+                var path = "";
+                var counter = 0;
+                while (!path.Contains("."))
+                {
+                    counter++;
+                    if (props.Length > counter)
+                        path += $"{((counter == 1) ? props[counter] : $" {props[counter]}")}";
+                    else
+                        break;
+                }
+                if (!path.Contains("."))
+                {
+                    return "501 Syntax error.\r\n";
+                }
+                else
+                {
+                    FtpServer.Reply(session, "150 Opening ||BINARY|| mode data connection.\r\n");
+                    var data = FtpServer.ReceiveData(session);
+                    if(data != null)
+                    {
+                        session.DirectoryEngine.SaveFilePart(path, data);
+                        session.DataTransfer.Close();
+                    }
+                    return "226 Transfer complete.\r\n";
+                }
+            }
         }
 
         public static string SessionRmd(Session session, string[] props)
@@ -535,11 +566,11 @@ namespace Server.FtpServer
                 }
                 else
                 {
-                    FtpServer.Reply(session, "150 Opening ||ASCII|| mode data connection.\r\n");
+                    FtpServer.Reply(session, "150 Opening ||BIBARY|| mode data connection.\r\n");
                     int result = session.DirectoryEngine.ReadFilePart(path, out buffer);
                     if (buffer != null)
                     {
-                        FtpServer.SendData(session, Encoding.UTF8.GetString(buffer));
+                        FtpServer.SendData(session, buffer);
                         buffer = null;
                     }
 

@@ -15,16 +15,16 @@ namespace Client.Model
     {
         private SessionInfo _sessionInfo;
         private CommandLogger _commandLogger;
-        private TcpClient _commandTransfer;
-        private TcpClient _dataTransfer;
+        private Socket _commandTransfer;
+        private Socket _dataTransfer;
 
-        public TcpClient CommandTransfer
+        public Socket CommandTransfer
         {
             get { return _commandTransfer; }
             private set { _commandTransfer = value; RaisePropertyChanged("CommandTransfer"); }
         }
 
-        public TcpClient DataTransfer
+        public Socket DataTransfer
         {
             get { return _dataTransfer; }
             private set { _dataTransfer = value; RaisePropertyChanged("DataTransfer"); }
@@ -46,7 +46,7 @@ namespace Client.Model
         {
             SessionInfo = sessionInfo;
             CommandLogger = new CommandLogger();
-            CommandTransfer = new TcpClient();
+            CommandTransfer = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         }
 
         public bool ConnectToServer()
@@ -101,10 +101,10 @@ namespace Client.Model
 
         private void SendMessage(string msg)
         {
-            if (CommandTransfer.Client.Connected)
+            if (CommandTransfer.Connected)
             {
                 byte[] byteData = Encoding.UTF8.GetBytes(msg);
-                var bytesSent = Convert.ToInt64(CommandTransfer.Client.Send(byteData));
+                var bytesSent = Convert.ToInt64(CommandTransfer.Send(byteData));
                 CommandLogger.AddNewCommand("Client", msg.Trim(new char[] { '\r', '\n' }));
                 CommandLogger.AddNewCommand("Application", $"{bytesSent} bytes sent to server.");
             }
@@ -116,10 +116,10 @@ namespace Client.Model
             {
                 var currByte = new Byte[1];
                 var buffer = new StringBuilder();
-                while (CommandTransfer.Client.Connected && currByte[0] != ((byte)'\n'))
+                while (CommandTransfer.Connected && currByte[0] != ((byte)'\n'))
                 {
                     currByte = new Byte[1];
-                    var byteCounter = CommandTransfer.Client.Receive(currByte, currByte.Length, SocketFlags.None);
+                    var byteCounter = CommandTransfer.Receive(currByte, currByte.Length, SocketFlags.None);
                     if (byteCounter.Equals(1))
                     {
                         buffer.Append(Encoding.UTF8.GetString(currByte));
@@ -138,7 +138,8 @@ namespace Client.Model
 
         private bool ConnectDataTransfer(string host,int port)
         {
-            DataTransfer = new TcpClient(host, port);
+            DataTransfer = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            DataTransfer.Connect(host, port);
             if (DataTransfer.Connected)
             {
                 return true;
@@ -171,33 +172,35 @@ namespace Client.Model
             if (DataTransfer.Connected && CommandTransfer.Available == 0)
             {
                 byte[] curr = null;
-                
-                NetworkStream stream = DataTransfer.GetStream();
-                while (DataTransfer.Connected)
+
+                using (var stream = new NetworkStream(DataTransfer))
                 {
-                    byte[] fileSizeBytes = new byte[4];
-                    int bytes = stream.Read(fileSizeBytes, 0, 4);
-                    int dataLength = BitConverter.ToInt32(fileSizeBytes, 0);
-
-                    int bytesLeft = dataLength;
-
-                    curr = new byte[dataLength];
-
-                    int bufferSize = 8192;
-                    int bytesRead = 0;
-
-                    while (bytesLeft > 0)
+                    while (DataTransfer.Connected)
                     {
-                        int curDataSize = Math.Min(bufferSize, bytesLeft);
-                        if (DataTransfer.Available < curDataSize)
-                            curDataSize = DataTransfer.Available;
+                        byte[] fileSizeBytes = new byte[4]; // для получения размера следующего сообщения
+                        int bytes = stream.Read(fileSizeBytes, 0, 4); // получаем размер из сокета
+                        int dataLength = BitConverter.ToInt32(fileSizeBytes, 0); // конвертируем в инт
 
-                        bytes = stream.Read(curr, bytesRead, curDataSize);
+                        int bytesLeft = dataLength;
 
-                        bytesRead += curDataSize;
-                        bytesLeft -= curDataSize;
+                        curr = new byte[dataLength]; // выделяем массив для получения данных из сокета
+
+                        int bufferSize = 8192;
+                        int bytesRead = 0;
+
+                        while (bytesLeft > 0)
+                        {
+                            int curDataSize = Math.Min(bufferSize, bytesLeft);
+                            if (DataTransfer.Available < curDataSize && DataTransfer.Available != 0)
+                                curDataSize = DataTransfer.Available;
+
+                            bytes = stream.Read(curr, bytesRead, curDataSize);
+
+                            bytesRead += curDataSize;
+                            bytesLeft -= curDataSize;
+                        }
+                        return curr;
                     }
-                    return curr;
                 }
             }
             return null;
@@ -207,7 +210,7 @@ namespace Client.Model
         {
             if (DataTransfer.Connected)
             {
-                using (var ns = new NetworkStream(DataTransfer.Client))
+                using (var ns = new NetworkStream(DataTransfer))
                 {
                     int bufferSize = 8192;
                     byte[] byteData = Encoding.UTF8.GetBytes(data);
@@ -227,6 +230,34 @@ namespace Client.Model
                         bytesSent += curDataSize;
                         bytesLeft -= curDataSize;
                     }
+                }
+            }
+        }
+
+        private void SendData(byte[] data)
+        {
+            if (DataTransfer.Connected)
+            {
+                using (var ns = new NetworkStream(DataTransfer))
+                {
+                    int bufferSize = 8192;
+                    byte[] dataSize = BitConverter.GetBytes(data.Length);
+
+                    ns.Write(dataSize, 0, 4);
+
+                    int bytesSent = 0;
+                    int bytesLeft = data.Length;
+
+                    while (bytesLeft > 0)
+                    {
+                        int curDataSize = Math.Min(bufferSize, bytesLeft);
+
+                        ns.Write(data, bytesSent, curDataSize);
+
+                        bytesSent += curDataSize;
+                        bytesLeft -= curDataSize;
+                    }
+                    CommandLogger.AddNewCommand("Application", $"{bytesSent} bytes successfully sent");
                 }
             }
         }
@@ -318,11 +349,50 @@ namespace Client.Model
             return null;
         }
 
-        public bool UploadFile(string data)
+        public bool UploadFile(string fullName)
         {
-            var output = false;
-
-            return output;
+            var msg = $"{Commands.EPSV}\r\n";
+            SendMessage(msg);
+            var response = new ServerResponse(ReceiveMessage());
+            if (!string.IsNullOrEmpty(response.Code))
+            {
+                if (response.Code[0] != '2')
+                {
+                    return false;
+                }
+                var port = int.Parse(Regex.Match(response.Prompt, @"\(\|\|\|\d+\|\)").Value.Replace("(|||", "").Replace("|)", ""));
+                var connRes = ConnectDataTransfer(SessionInfo.Host, port);
+                if (connRes)
+                {
+                    int start = fullName.LastIndexOf("\\");
+                    int end = fullName.Length - start;
+                    var name = fullName.Substring(start, end);
+                    msg = $"{Commands.RETR} {name}\r\n";
+                    SendMessage(msg);
+                    response = new ServerResponse(ReceiveMessage());
+                    if (!string.IsNullOrEmpty(response.Code))
+                    {
+                        if (response.Code[0] != '1')
+                        {
+                            DisconnectDataTransfer();
+                            return false;
+                        }
+                        Thread.Sleep(TimeSpan.FromSeconds(1));
+                        var output = File.ReadAllBytes(fullName);
+                        SendData(output);
+                        response = new ServerResponse(ReceiveMessage());
+                        if (!string.IsNullOrEmpty(response.Code))
+                        {
+                            if (response.Code[0] == '2')
+                            {
+                                DisconnectDataTransfer();
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
         }
 
         public string ChangeCurrentDirectory(string path)

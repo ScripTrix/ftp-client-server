@@ -160,43 +160,79 @@ namespace Server.FtpServer
             }
         }
 
+        //public static byte[] ReceiveData(Session session)
+        //{
+        //    NetworkStream stream = session.DataTransfer.GetStream();
+
+        //    byte[] fileSizeBytes = new byte[4];
+        //    int bytes = stream.Read(fileSizeBytes, 0, 4);
+        //    int dataLength = BitConverter.ToInt32(fileSizeBytes, 0);
+
+        //    int bytesLeft = dataLength;
+        //    byte[] data = new byte[dataLength];
+
+        //    int bufferSize = 8192;
+        //    int bytesRead = 0;
+
+        //    while (bytesLeft > 0)
+        //    {
+        //        int curDataSize = Math.Min(bufferSize, bytesLeft);
+        //        if (session.DataTransfer.Available < curDataSize)
+        //            curDataSize = session.DataTransfer.Available;
+
+        //        bytes = stream.Read(data, bytesRead, curDataSize);
+
+        //        bytesRead += curDataSize;
+        //        bytesLeft -= curDataSize;
+        //    }
+        //    return data;
+        //}
+
         public static byte[] ReceiveData(Session session)
         {
-            NetworkStream stream = session.DataTransfer.GetStream();
-
-            byte[] fileSizeBytes = new byte[4];
-            int bytes = stream.Read(fileSizeBytes, 0, 4);
-            int dataLength = BitConverter.ToInt32(fileSizeBytes, 0);
-
-            int bytesLeft = dataLength;
-            byte[] data = new byte[dataLength];
-
-            int bufferSize = 65536;
-            int bytesRead = 0;
-
-            while (bytesLeft > 0)
+            if (session.DataTransfer.Connected && session.CommandTransfer.Available == 0)
             {
-                int curDataSize = Math.Min(bufferSize, bytesLeft);
-                if (session.DataTransfer.Available < curDataSize)
-                    curDataSize = session.DataTransfer.Available;
+                byte[] curr = null;
 
-                bytes = stream.Read(data, bytesRead, curDataSize);
+                NetworkStream stream = session.DataTransfer.GetStream();
+                while (session.DataTransfer.Connected)
+                {
+                    byte[] fileSizeBytes = new byte[4]; // для получения размера следующего сообщения
+                    int bytes = stream.Read(fileSizeBytes, 0, 4); // получаем размер из сокета
+                    int dataLength = BitConverter.ToInt32(fileSizeBytes, 0); // конвертируем в инт
 
-                bytesRead += curDataSize;
-                bytesLeft -= curDataSize;
+                    int bytesLeft = dataLength;
+
+                    curr = new byte[dataLength]; // выделяем массив для получения данных из сокета
+
+                    int bufferSize = 8192;
+                    int bytesRead = 0;
+
+                    while (bytesLeft > 0)
+                    {
+                        int curDataSize = Math.Min(bufferSize, bytesLeft);
+                        if (session.DataTransfer.Available < curDataSize && session.DataTransfer.Available != 0)
+                            curDataSize = session.DataTransfer.Available;
+
+                        bytes = stream.Read(curr, bytesRead, curDataSize);
+
+                        bytesRead += curDataSize;
+                        bytesLeft -= curDataSize;
+                    }
+                    return curr;
+                }
             }
-            return data;
+            return null;
         }
 
-        public static void SendData(Session session, string data)
+        public static void SendData(Session session, byte[] data)
         {
             if (session.DataTransfer.Connected)
             {
                 using (var ns = new NetworkStream(session.DataTransfer.Client))
                 {
                     int bufferSize = 8192;
-                    byte[] byteData = Encoding.UTF8.GetBytes(data);
-                    byte[] dataSize = BitConverter.GetBytes(byteData.Length);
+                    byte[] dataSize = BitConverter.GetBytes(data.Length);
 
                     ns.Write(dataSize, 0, 4);
 
@@ -207,7 +243,7 @@ namespace Server.FtpServer
                     {
                         int curDataSize = Math.Min(bufferSize, bytesLeft);
 
-                        ns.Write(byteData, bytesSent, curDataSize);
+                        ns.Write(data, bytesSent, curDataSize);
 
                         bytesSent += curDataSize;
                         bytesLeft -= curDataSize;
@@ -303,7 +339,7 @@ namespace Server.FtpServer
                 if (session != null)
                 {
                     //InitSessionCommands(session);
-                    Reply(session, "220 Connected to FtpServer(Developed by ScripTrix).\r\n");
+                    Reply(session, "220 Connected to FtpServer.\r\n");
                     while (session.CommandTransfer.Connected || !token.IsCancellationRequested)
                     {
                         if (session.IsAuthenticate)

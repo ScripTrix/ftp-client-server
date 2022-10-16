@@ -20,6 +20,14 @@ namespace Server.BLL
 
         public static string SystemRootPath { get; private set; } = ConfigurationManager.AppSettings["systemRootPath"];
 
+        public string CurrentSystemPath
+        {
+            get
+            {
+                return $"{SystemRootPath}{CurrentFtpPath.Replace("/", "\\")}";
+            }
+        }
+
         public string CurrentFtpPath { get; set; } = "/";
 
 
@@ -51,13 +59,27 @@ namespace Server.BLL
             if (File.Exists(systemPath))
             {
                 var fileLength = new FileInfo(systemPath).Length;
-                    buffer = new byte[fileLength];
+                buffer = new byte[fileLength];
                 using (var fs = new FileStream(systemPath, FileMode.Open))
                 {
                     return fs.Read(buffer, 0, (int)fileLength);
                 }
             }
             return -1;
+        }
+
+        public bool SaveFilePart(string name, byte[] buffer)
+        {
+            try
+            {
+                var path = $"{CurrentSystemPath}{name}";
+                File.WriteAllBytes(path, buffer);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
         }
 
         public string GetWorkingDirectory()

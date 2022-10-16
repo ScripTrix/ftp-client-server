@@ -136,6 +136,10 @@ namespace Client.ViewModel
                         MessageBox.Show("Drive not ready");
                     }
                 }
+                else if (((FileObjectInfo)obj).Type == FileObjectType.File)
+                {
+                    var data = Client.UploadFile($"{((FileObjectInfo)obj).FullName}");
+                }
             }
         }
         #endregion
@@ -304,14 +308,13 @@ namespace Client.ViewModel
                         if (CurrentDirectory.Any(e => e.Type == FileObjectType.Drive))
                         {
                             path = ConfigurationManager.AppSettings["defaultSavePath"] + name;
-
                         }
                         else
                         {
-                            path = SelectedFileObject.FullName + name;
+                            path = SelectedFileObject.FullName + "\\" + name;
                         }
                         if (!string.IsNullOrEmpty(path))
-                        {
+                        {   
                             File.WriteAllBytes(path, data);
                         }
                     }

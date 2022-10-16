@@ -18,3 +18,5 @@
 /Server/Server.FtpServer.DTO/bin/Debug/netcoreapp3.1
 /Server/.vs/Server
 /.vs
+/Client/Client/bin/Debug/netcoreapp3.1
+/Client/Client/obj
