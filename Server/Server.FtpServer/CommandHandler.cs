@@ -287,14 +287,15 @@ namespace Server.FtpServer
 
         public static string SessionEpsv(Session session, string[] props)
         {
-            TcpListener listener = null;
+            Socket listener = null;
             bool isConnected = false;
             for (int i = 49152; i < 65535; i++)
             {
                 try
                 {
                     var ipEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), i);
-                    listener = new TcpListener(ipEndPoint);
+                    listener = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                    listener.Bind(ipEndPoint);
                 }
                 catch (Exception ex)
                 {
@@ -304,11 +305,11 @@ namespace Server.FtpServer
                 {
                     if (listener != null)
                     {
-                        listener.Start();
+                        listener.Listen(1);
                         Console.WriteLine($"Extended passive mode on (Port: {i})");
                         FtpServer.Reply(session, $"229 Entering Extended Passive Mode (|||{i}|).\r\n");
-                        session.DataTransfer = listener.AcceptTcpClient();
-                        listener.Stop();
+                        session.DataTransfer = listener.Accept();
+                        listener.Close();
                     }
                 }
                 if (session.DataTransfer.Connected)
@@ -628,7 +629,7 @@ namespace Server.FtpServer
 
         public static string SessionQuit(Session session, string[] props)
         {
-            session.CommandTransfer.Client.Close();
+            session.CommandTransfer.Close();
             return "220";
         }
     }

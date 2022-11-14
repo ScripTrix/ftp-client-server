@@ -24,7 +24,7 @@ namespace Server.FtpServer
 
         public DB DB { get; private set; }
 
-        public TcpListener TcpListener { get; private set; }
+        public Socket TcpListener { get; private set; }
 
         public IPAddress IpAddress { get; set; }
 
@@ -66,8 +66,10 @@ namespace Server.FtpServer
             try
             {
                 Started = true;
-                TcpListener = new TcpListener(IpAddress, Port);
-                TcpListener.Start();
+                TcpListener = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+
+                TcpListener.Bind(new IPEndPoint(IpAddress, Port));
+                TcpListener.Listen(100);
                 AcceptorThread = new Thread(AcceptConnections);
                 AcceptorThread.Start();
                 SessionsThreads = new Dictionary<Session, ThreadWrapper>();
@@ -98,7 +100,7 @@ namespace Server.FtpServer
                         break;
                     }
                 }
-                TcpListener.Stop();
+                TcpListener.Close();
 
                 while (true)
                 {
@@ -133,8 +135,7 @@ namespace Server.FtpServer
                 {
                     session.Id = maxValue;
                 }
-
-                session.CommandTransfer = TcpListener.AcceptTcpClient();
+                session.CommandTransfer = TcpListener.Accept();
                 session.DirectoryEngine = new BLL.DirectoryEngine();
                 if (session.CommandTransfer.Connected)
                 {
@@ -152,10 +153,10 @@ namespace Server.FtpServer
 
         public static void Reply(Session session, string data)
         {
-            if (session.CommandTransfer.Client.Connected)
+            if (session.CommandTransfer.Connected)
             {
                 byte[] byteData = Encoding.UTF8.GetBytes(data);
-                var bytesSent = Convert.ToInt64(session.CommandTransfer.Client.Send(byteData));
+                var bytesSent = Convert.ToInt64(session.CommandTransfer.Send(byteData));
                 Console.WriteLine($"{bytesSent} bytes sent to client session: {session.Id}");
             }
         }
@@ -194,7 +195,7 @@ namespace Server.FtpServer
             {
                 byte[] curr = null;
 
-                NetworkStream stream = session.DataTransfer.GetStream();
+                NetworkStream stream = new NetworkStream(session.DataTransfer);
                 while (session.DataTransfer.Connected)
                 {
                     byte[] fileSizeBytes = new byte[4]; // для получения размера следующего сообщения
@@ -229,7 +230,7 @@ namespace Server.FtpServer
         {
             if (session.DataTransfer.Connected)
             {
-                using (var ns = new NetworkStream(session.DataTransfer.Client))
+                using (var ns = new NetworkStream(session.DataTransfer))
                 {
                     int bufferSize = 8192;
                     byte[] dataSize = BitConverter.GetBytes(data.Length);
@@ -257,10 +258,10 @@ namespace Server.FtpServer
         {
             var currByte = new Byte[1];
             var buffer = new StringBuilder();
-            while (session.CommandTransfer.Client.Connected && currByte[0] != ((byte)('\n')))
+            while (session.CommandTransfer.Connected && currByte[0] != ((byte)('\n')))
             {
                 currByte = new Byte[1];
-                var byteCounter = session.CommandTransfer.Client.Receive(currByte, currByte.Length, SocketFlags.None);
+                var byteCounter = session.CommandTransfer.Receive(currByte, currByte.Length, SocketFlags.None);
                 if (byteCounter.Equals(1))
                 {
                     buffer.Append(Encoding.UTF8.GetString(currByte));

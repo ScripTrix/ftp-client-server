@@ -170,7 +170,7 @@ namespace Client.Model
         private byte[] ReceiveData()
         {
             if (DataTransfer.Connected && CommandTransfer.Available == 0)
-            {
+            {                             
                 byte[] curr = null;
 
                 using (var stream = new NetworkStream(DataTransfer))

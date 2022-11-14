@@ -20,13 +20,13 @@ namespace Server.FtpServer.DTO
 
         public DirectoryEngine DirectoryEngine { get; set; }
 
-        public TcpClient CommandTransfer { get; set; }
+        public Socket CommandTransfer { get; set; }
 
         public string CurrentCommand { get; set; }
 
         public string PreviousCommand { get; set; }
         
-        public TcpClient DataTransfer { get; set; }
+        public Socket DataTransfer { get; set; }
         
         public FtpModes Mode { get; set; }
 
